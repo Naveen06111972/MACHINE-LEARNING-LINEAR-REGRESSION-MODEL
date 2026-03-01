@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML for MBA — Sales Forecasting Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0020;
+    --surface: #130a2e;
+    --border: #2e1a5a;
+    --accent: #00ffb2;
+    --accent2: #bf5fff;
+    --accent3: #ff3c6e;
+    --text: #f0e8ff;
+    --muted: #7a6a9a;
+    --green: #00ffb2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Vibrant animated gradient background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(191,95,255,.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 75%, rgba(0,255,178,.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,60,110,.08) 0%, transparent 60%);
+    animation: bgShift 8s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(191,95,255,.06) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,255,178,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes bgShift {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: .7; transform: scale(1.05); }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-shadow: 0 0 12px rgba(0,255,178,.4);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1px;
+  }
+
+  header h1 span {
+    background: linear-gradient(90deg, var(--accent), #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-badge {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(0,255,178,.5);
+  }
+
+  .status-dot::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .3; }
+  }
+
+  /* Concept Cards */
+  .concept-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+
+  .concept-card:hover { border-color: var(--accent); }
+
+  .concept-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .concept-card:nth-child(1)::after { background: linear-gradient(90deg, var(--accent), #00e5ff); }
+  .concept-card:nth-child(2)::after { background: linear-gradient(90deg, var(--accent2), #ff6ef7); }
+  .concept-card:nth-child(3)::after { background: linear-gradient(90deg, var(--accent3), #ff9a3c); }
+
+  .concept-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .concept-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .concept-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Main Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(191,95,255,.08);
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* Canvas */
+  #chartCanvas {
+    width: 100%;
+    background: #07001a;
+    border-radius: 2px;
+    cursor: crosshair;
+    box-shadow: 0 0 40px rgba(191,95,255,.12), inset 0 0 30px rgba(0,0,0,.4);
+  }
+
+  .canvas-hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  /* Controls */
+  .control-group {
+    margin-bottom: 24px;
+  }
+
+  .control-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex; justify-content: space-between;
+  }
+
+  .control-label span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+  }
+
+  /* Feature Toggles */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .feature-toggle {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    transition: all .2s;
+    background: transparent;
+    text-align: left;
+  }
+
+  .feature-toggle.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,178,.05);
+    box-shadow: 0 0 8px rgba(0,255,178,.15);
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-box {
+    background: #0a0020;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .stat-box:hover {
+    border-color: var(--accent2);
+    box-shadow: 0 0 12px rgba(191,95,255,.15);
+  }
+
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-value.good { color: var(--green); }
+  .stat-value.bad { color: var(--accent3); }
+
+  /* Predict */
+  .predict-section {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  .predict-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .predict-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .input-group label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: #07001a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .input-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,255,178,.2);
+  }
+
+  .btn-predict {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #00d4ff);
+    color: #0d0020;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: opacity .2s, box-shadow .2s;
+    box-shadow: 0 0 20px rgba(0,255,178,.25);
+  }
+
+  .btn-predict:hover {
+    opacity: .9;
+    box-shadow: 0 0 30px rgba(0,255,178,.4);
+  }
+
+  .prediction-result {
+    margin-top: 14px;
+    padding: 14px;
+    background: #07001a;
+    border: 1px solid rgba(0,255,178,.25);
+    border-radius: 3px;
+    display: none;
+    box-shadow: 0 0 20px rgba(0,255,178,.08);
+  }
+
+  .prediction-result.show { display: block; }
+
+  .pred-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .pred-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--green);
+  }
+
+  .pred-equation {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Equation display */
+  .equation-box {
+    background: #07001a;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    border-radius: 0 3px 3px 0;
+    margin-bottom: 20px;
+    letter-spacing: .5px;
+    box-shadow: inset 0 0 20px rgba(191,95,255,.05);
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  .legend-line {
+    width: 20px; height: 2px;
+  }
+
+  /* MBA Insight */
+  .insight-box {
+    background: rgba(0,255,178,.03);
+    border: 1px solid rgba(0,255,178,.2);
+    border-radius: 3px;
+    padding: 14px 16px;
+    margin-top: 16px;
+  }
+
+  .insight-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px rgba(0,255,178,.3);
+  }
+
+  .insight-text {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.7;
+  }
+
+  .insight-text strong { color: var(--text); }
+
+  /* Button group */
+  .btn-group { display: flex; gap: 8px; margin-bottom: 16px; }
+
+  .btn-sm {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all .2s;
+  }
+
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.danger:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .concept-strip { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-left">
+      <div class="eyebrow">Machine Learning · MBA Program</div>
+      <h1>Sales Revenue<br><span>Prediction Model</span></h1>
+    </div>
+    <div class="header-badge">
+      <div class="status-dot">Model Active</div>
+      <div>Linear Regression</div>
+      <div>v1.0 · Interactive</div>
+    </div>
+  </header>
+
+  <!-- Concept Cards -->
+  <div class="concept-strip">
+    <div class="concept-card">
+      <div class="concept-label">Concept 01</div>
+      <div class="concept-title">Supervised Learning</div>
+      <div class="concept-desc">The model learns from labeled historical data (input→output pairs) to predict future outcomes. Like training a new analyst with past reports.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-label">Concept 02</div>
+      <div class="concept-title">Linear Regression</div>
+      <div class="concept-desc">Finds the best-fit line through data points. Minimizes the total error (MSE) between predictions and actual values using calculus.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-label">Concept 03</div>
+      <div class="concept-title">R² Score</div>
+      <div class="concept-desc">Measures how well the model explains variance in data. R²=1.0 is perfect; R²=0 means the model is no better than guessing the mean.</div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-grid">
+
+    <!-- Chart Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Data Visualization & Regression Line</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">SCATTER PLOT</div>
+        </div>
+        <div class="panel-body">
+          <div class="btn-group">
+            <button class="btn-sm" onclick="loadPreset('retail')">Retail Data</button>
+            <button class="btn-sm" onclick="loadPreset('saas')">SaaS Data</button>
+            <button class="btn-sm" onclick="loadPreset('weak')">Weak Correlation</button>
+            <button class="btn-sm danger" onclick="clearData()">Clear</button>
+          </div>
+          <canvas id="chartCanvas" width="620" height="380"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Training Data</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Test Data</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--accent)"></div>Regression Line</div>
+            <div class="legend-item"><div class="legend-line" style="background:rgba(255,255,255,.2);border-top:1px dashed rgba(255,255,255,.2)"></div>Confidence Interval</div>
+          </div>
+          <div class="canvas-hint">Click on chart to add data points · Load presets to start</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">
+          <div class="panel-title">Model Performance Metrics</div>
+        </div>
+        <div class="panel-body">
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-label">R² Score</div>
+              <div class="stat-value" id="r2Val">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">MSE (Mean Sq Error)</div>
+              <div class="stat-value" id="mseVal" style="font-size:18px">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Data Points</div>
+              <div class="stat-value" id="nVal">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Correlation (r)</div>
+              <div class="stat-value" id="corrVal">—</div>
+            </div>
+          </div>
+          <div class="equation-box" id="equationBox">
+            Ŷ = β₀ + β₁X₁ + β₂X₂ &nbsp;·&nbsp; Add data to compute
+          </div>
+          <div class="insight-box" id="insightBox">
+            <div class="insight-label">📊 MBA Insight</div>
+            <div class="insight-text" id="insightText">Load a dataset or add points to see model interpretation and business insights.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <div class="panel-title">Model Configuration</div>
+        </div>
+        <div class="panel-body">
+
+          <div class="control-group">
+            <div class="control-label">Noise Level <span id="noiseLabel">20</span></div>
+            <input type="range" id="noiseSlider" min="0" max="100" value="20" oninput="updateNoise(this.value)">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">Train/Test Split <span id="splitLabel">80/20</span></div>
+            <input type="range" id="splitSlider" min="50" max="90" value="80" oninput="updateSplit(this.value)">
+          </div>
+
+          <div class="control-label">Feature Variables</div>
+          <div class="feature-grid">
+            <button class="feature-toggle active" onclick="toggleFeature(this, 'advertising')">Advertising ₹</button>
+            <button class="feature-toggle active" onclick="toggleFeature(this, 'sales_team')">Sales Team Size</button>
+            <button class="feature-toggle" onclick="toggleFeature(this, 'price')">Price Point</button>
+            <button class="feature-toggle" onclick="toggleFeature(this, 'season')">Seasonality</button>
+          </div>
+
+          <button class="btn-predict" onclick="trainModel()" style="margin-bottom:10px;background:linear-gradient(135deg,#bf5fff,#ff3c6e);color:white;box-shadow:0 0 20px rgba(191,95,255,.3)">
+            ▶ TRAIN MODEL
+          </button>
+
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Revenue Predictor</div>
+        </div>
+        <div class="panel-body">
+          <div class="predict-section">
+            <div class="predict-title">Enter Business Inputs</div>
+            <div class="predict-inputs">
+              <div class="input-group">
+                <label>Ad Spend (₹K)</label>
+                <input type="number" id="adInput" placeholder="e.g. 50" value="50">
+              </div>
+              <div class="input-group">
+                <label>Sales Team</label>
+                <input type="number" id="teamInput" placeholder="e.g. 10" value="10">
+              </div>
+              <div class="input-group">
+                <label>Price (₹)</label>
+                <input type="number" id="priceInput" placeholder="e.g. 99" value="99">
+              </div>
+              <div class="input-group">
+                <label>Month (1–12)</label>
+                <input type="number" id="monthInput" placeholder="e.g. 6" value="6" min="1" max="12">
+              </div>
+            </div>
+            <button class="btn-predict" onclick="predict()">PREDICT REVENUE →</button>
+            <div class="prediction-result" id="predResult">
+              <div class="pred-label">Predicted Annual Revenue</div>
+              <div class="pred-value" id="predVal">₹0</div>
+              <div class="pred-equation" id="predEq"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ==============================
+// DATA & MODEL STATE
+// ==============================
+let data = [];
+let model = { slope: 0, intercept: 0, trained: false };
+let noiseLevel = 20;
+let trainSplit = 0.8;
+const canvas = document.getElementById('chartCanvas');
+const ctx = canvas.getContext('2d');
+
+// ==============================
+// PRESET DATASETS
+// ==============================
+const presets = {
+  retail: {
+    name: "Retail Chain",
+    points: [
+      {x:10,y:120},{x:15,y:160},{x:20,y:195},{x:25,y:230},{x:30,y:280},
+      {x:35,y:310},{x:40,y:350},{x:45,y:400},{x:50,y:430},{x:55,y:470},
+      {x:60,y:510},{x:65,y:540},{x:70,y:580},{x:75,y:620},{x:80,y:660},
+      {x:22,y:210},{x:48,y:410},{x:33,y:305},{x:57,y:488},{x:42,y:370}
+    ],
+    insight: "<strong>Retail Dataset:</strong> Strong positive correlation between advertising spend and revenue (R²≈0.98). Each ₹1K increase in ad spend yields ~₹8K in revenue. <strong>Business takeaway:</strong> Marketing ROI is highly predictable — ideal for budgeting with confidence intervals."
+  },
+  saas: {
+    name: "SaaS Company",
+    points: [
+      {x:5,y:80},{x:8,y:100},{x:12,y:140},{x:18,y:190},{x:25,y:260},
+      {x:30,y:320},{x:38,y:400},{x:45,y:480},{x:52,y:550},{x:60,y:620},
+      {x:15,y:170},{x:28,y:300},{x:40,y:420},{x:50,y:530},{x:35,y:370},
+      {x:22,y:240},{x:55,y:590},{x:10,y:115},{x:42,y:450},{x:65,y:650}
+    ],
+    insight: "<strong>SaaS Dataset:</strong> Exponential-like growth is approximated linearly here. Note how at higher spend levels the model may underpredict — a sign you might need <strong>polynomial regression</strong>. Revenue grows ~₹9.5K per ₹1K spend."
+  },
+  weak: {
+    name: "Weak Correlation",
+    points: [
+      {x:10,y:300},{x:20,y:180},{x:30,y:420},{x:40,y:250},{x:50,y:380},
+      {x:15,y:200},{x:25,y:450},{x:35,y:160},{x:45,y:390},{x:55,y:280},
+      {x:60,y:320},{x:70,y:200},{x:80,y:430},{x:12,y:340},{x:65,y:170},
+      {x:28,y:410},{x:48,y:230},{x:38,y:350},{x:52,y:290},{x:42,y:400}
+    ],
+    insight: "<strong>Weak Correlation:</strong> R² is low, meaning advertising spend alone doesn't explain revenue variance. <strong>Business takeaway:</strong> Other variables (competition, product quality, economic conditions) are likely driving results — this model alone would be misleading."
+  }
+};
+
+function loadPreset(type) {
+  const preset = presets[type];
+  data = preset.points.map(p => ({
+    x: p.x + (Math.random() - 0.5) * noiseLevel * 0.3,
+    y: p.y + (Math.random() - 0.5) * noiseLevel * 3,
+    isTrain: Math.random() < trainSplit
+  }));
+  document.getElementById('insightText').innerHTML = preset.insight;
+  trainModel();
+  draw();
+}
+
+function clearData() {
+  data = [];
+  model.trained = false;
+  updateStats(null);
+  draw();
+  document.getElementById('equationBox').innerHTML = 'Ŷ = β₀ + β₁X₁ + β₂X₂ &nbsp;·&nbsp; Add data to compute';
+  document.getElementById('insightText').innerHTML = 'Load a dataset or add points to see model interpretation.';
+}
+
+// ==============================
+// LINEAR REGRESSION (OLS)
+// ==============================
+function linearRegression(points) {
+  const n = points.length;
+  if (n < 2) return null;
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  const xMean = xs.reduce((a,b) => a+b,0) / n;
+  const yMean = ys.reduce((a,b) => a+b,0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - xMean) * (ys[i] - yMean);
+    den += (xs[i] - xMean) ** 2;
+  }
+  const slope = den === 0 ? 0 : num / den;
+  const intercept = yMean - slope * xMean;
+  // R²
+  const yPreds = xs.map(x => slope * x + intercept);
+  const ssTot = ys.reduce((s, y) => s + (y - yMean)**2, 0);
+  const ssRes = ys.reduce((s, y, i) => s + (y - yPreds[i])**2, 0);
+  const r2 = ssTot === 0 ? 0 : 1 - ssRes/ssTot;
+  const mse = ssRes / n;
+  const corr = num / Math.sqrt(den * ys.reduce((s,y) => s+(y-yMean)**2,0));
+  return { slope, intercept, r2, mse, corr, xMean, yMean };
+}
+
+function trainModel() {
+  if (data.length < 2) return;
+  const trainData = data.filter(p => p.isTrain !== false);
+  const result = linearRegression(trainData.length >= 2 ? trainData : data);
+  if (!result) return;
+  model = { ...result, trained: true };
+  updateStats(result);
+  draw();
+}
+
+function updateStats(r) {
+  if (!r) {
+    ['r2Val','mseVal','nVal','corrVal'].forEach(id => {
+      document.getElementById(id).textContent = id === 'nVal' ? '0' : '—';
+      document.getElementById(id).className = 'stat-value';
+    });
+    return;
+  }
+  const r2El = document.getElementById('r2Val');
+  r2El.textContent = r.r2.toFixed(3);
+  r2El.className = 'stat-value ' + (r.r2 > 0.7 ? 'good' : r.r2 > 0.4 ? '' : 'bad');
+  document.getElementById('mseVal').textContent = r.mse.toFixed(1);
+  document.getElementById('nVal').textContent = data.length;
+  const corrEl = document.getElementById('corrVal');
+  corrEl.textContent = r.corr.toFixed(3);
+  corrEl.className = 'stat-value ' + (Math.abs(r.corr) > 0.7 ? 'good' : '');
+  document.getElementById('equationBox').innerHTML =
+    `Revenue = ${r.intercept.toFixed(1)} + ${r.slope.toFixed(2)} × AdSpend`;
+}
+
+// ==============================
+// DRAWING
+// ==============================
+const PAD = { left: 55, right: 20, top: 20, bottom: 40 };
+
+function getCanvasSize() {
+  return { w: canvas.width, h: canvas.height };
+}
+
+function dataToCanvas(x, y, xMin, xMax, yMin, yMax) {
+  const {w, h} = getCanvasSize();
+  const cx = PAD.left + (x - xMin) / (xMax - xMin) * (w - PAD.left - PAD.right);
+  const cy = h - PAD.bottom - (y - yMin) / (yMax - yMin) * (h - PAD.top - PAD.bottom);
+  return [cx, cy];
+}
+
+function draw() {
+  const {w, h} = getCanvasSize();
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = '#07001a';
+  ctx.fillRect(0, 0, w, h);
+
+  if (data.length === 0) {
+    ctx.fillStyle = '#333345';
+    ctx.font = '13px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Load a preset dataset or click to add data points', w/2, h/2);
+    return;
+  }
+
+  const xs = data.map(p => p.x);
+  const ys = data.map(p => p.y);
+  const xMin = Math.min(...xs) - 5, xMax = Math.max(...xs) + 5;
+  const yMin = Math.min(...ys) - 20, yMax = Math.max(...ys) + 20;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const x = PAD.left + i * (w - PAD.left - PAD.right) / 5;
+    const y = PAD.top + i * (h - PAD.top - PAD.bottom) / 5;
+    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, h - PAD.bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(w - PAD.right, y); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,.15)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top);
+  ctx.lineTo(PAD.left, h - PAD.bottom);
+  ctx.lineTo(w - PAD.right, h - PAD.bottom);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#555570';
+  ctx.font = '10px IBM Plex Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 5; i++) {
+    const xVal = xMin + i * (xMax - xMin) / 5;
+    const [cx] = dataToCanvas(xVal, yMin, xMin, xMax, yMin, yMax);
+    ctx.fillText(xVal.toFixed(0), cx, h - PAD.bottom + 15);
+    const yVal = yMin + i * (yMax - yMin) / 5;
+    const [, cy] = dataToCanvas(xMin, yVal, xMin, xMax, yMin, yMax);
+    ctx.textAlign = 'right';
+    ctx.fillText(yVal.toFixed(0), PAD.left - 8, cy + 4);
+    ctx.textAlign = 'center';
+  }
+
+  // Axis titles
+  ctx.fillStyle = '#777790';
+  ctx.font = '11px IBM Plex Mono, monospace';
+  ctx.fillText('Ad Spend (\u20b9K)', w/2, h - 4);
+  ctx.save(); ctx.translate(14, h/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Revenue (\u20b9K)', 0, 0);
+  ctx.restore();
+
+  // Regression line + confidence band
+  if (model.trained) {
+    const x0 = xMin, x1 = xMax;
+    const y0 = model.slope * x0 + model.intercept;
+    const y1 = model.slope * x1 + model.intercept;
+    const [cx0, cy0] = dataToCanvas(x0, y0, xMin, xMax, yMin, yMax);
+    const [cx1, cy1] = dataToCanvas(x1, y1, xMin, xMax, yMin, yMax);
+
+    // Confidence band
+    const stdErr = Math.sqrt(model.mse) * 1.5;
+    const yH0 = y0 + stdErr, yH1 = y1 + stdErr;
+    const yL0 = y0 - stdErr, yL1 = y1 - stdErr;
+    const [chx0, chy0] = dataToCanvas(x0, yH0, xMin, xMax, yMin, yMax);
+    const [chx1, chy1] = dataToCanvas(x1, yH1, xMin, xMax, yMin, yMax);
+    const [clx0, cly0] = dataToCanvas(x0, yL0, xMin, xMax, yMin, yMax);
+    const [clx1, cly1] = dataToCanvas(x1, yL1, xMin, xMax, yMin, yMax);
+    ctx.beginPath();
+    ctx.moveTo(chx0, chy0);
+    ctx.lineTo(chx1, chy1);
+    ctx.lineTo(clx1, cly1);
+    ctx.lineTo(clx0, cly0);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,255,178,.04)';
+    ctx.fill();
+
+    ctx.strokeStyle = '#00ffb2';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(0,255,178,.6)';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(cx0, cy0);
+    ctx.lineTo(cx1, cy1);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Data points
+  data.forEach(p => {
+    const [cx, cy] = dataToCanvas(p.x, p.y, xMin, xMax, yMin, yMax);
+    const isTrain = p.isTrain !== false;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = isTrain ? 'rgba(191,95,255,0.9)' : 'rgba(255,60,110,0.9)';
+    ctx.shadowColor = isTrain ? 'rgba(191,95,255,.7)' : 'rgba(255,60,110,.7)';
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (model.trained) {
+      const yPred = model.slope * p.x + model.intercept;
+      const [, predCy] = dataToCanvas(p.x, yPred, xMin, xMax, yMin, yMax);
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2,3]);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, predCy); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  });
+}
+
+// ==============================
+// CLICK TO ADD POINTS
+// ==============================
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top) * scaleY;
+
+  if (data.length === 0) {
+    // Add first point with default range
+    const x = (px - PAD.left) / (canvas.width - PAD.left - 20) * 80 + 5;
+    const y = (1 - (py - PAD.top) / (canvas.height - PAD.top - PAD.bottom)) * 600 + 50;
+    data.push({ x, y, isTrain: Math.random() < trainSplit });
+    draw(); return;
+  }
+
+  const xs = data.map(p => p.x); const ys = data.map(p => p.y);
+  const xMin = Math.min(...xs)-5, xMax = Math.max(...xs)+5;
+  const yMin = Math.min(...ys)-20, yMax = Math.max(...ys)+20;
+  const x = xMin + (px - PAD.left) / (canvas.width - PAD.left - 20) * (xMax - xMin);
+  const y = yMin + (1 - (py - PAD.top) / (canvas.height - PAD.top - PAD.bottom)) * (yMax - yMin);
+  data.push({ x, y, isTrain: Math.random() < trainSplit });
+  if (data.length >= 2) trainModel();
+  draw();
+});
+
+// ==============================
+// PREDICTION
+// ==============================
+function predict() {
+  const ad = parseFloat(document.getElementById('adInput').value) || 50;
+  const team = parseFloat(document.getElementById('teamInput').value) || 10;
+  const price = parseFloat(document.getElementById('priceInput').value) || 99;
+  const month = parseFloat(document.getElementById('monthInput').value) || 6;
+
+  // Multi-variable prediction formula (simplified)
+  const baseRevenue = 50;
+  const adCoeff = model.trained ? model.slope : 8.5;
+  const adIntercept = model.trained ? model.intercept : 20;
+
+  const revenue = adIntercept +
+    adCoeff * ad +
+    team * 12.3 +
+    (200 - price) * 0.8 +
+    Math.sin(month / 12 * Math.PI * 2) * 30;
+
+  const result = Math.max(0, revenue);
+  const el = document.getElementById('predResult');
+  document.getElementById('predVal').textContent = '₹' + result.toFixed(0) + 'K';
+  document.getElementById('predEq').textContent =
+    `= ${adIntercept.toFixed(1)} + ${adCoeff.toFixed(2)}×${ad} + 12.3×${team} + ${((200-price)*0.8).toFixed(1)} + seasonal`;
+  el.classList.add('show');
+}
+
+// ==============================
+// CONTROLS
+// ==============================
+function updateNoise(val) {
+  noiseLevel = parseInt(val);
+  document.getElementById('noiseLabel').textContent = val;
+}
+
+function updateSplit(val) {
+  trainSplit = parseInt(val) / 100;
+  document.getElementById('splitLabel').textContent = val + '/' + (100-val);
+  data.forEach(p => p.isTrain = Math.random() < trainSplit);
+  if (data.length >= 2) trainModel();
+}
+
+function toggleFeature(btn, name) {
+  btn.classList.toggle('active');
+}
+
+// Initial draw
+draw();
+</script>
+</body>
+</html>
